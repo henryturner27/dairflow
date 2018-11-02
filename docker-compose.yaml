@@ -1,0 +1,104 @@
+version: '3'
+services:
+    postgres:
+        image: postgres:9.6
+        restart: always
+        environment:
+            - POSTGRES_USER=airflow
+            - POSTGRES_PASSWORD=example_pw
+            - POSTGRES_HOST=postgres
+            - POSTGRES_DB=airflow
+        expose:
+            - "5432"
+        volumes:
+            - "db_data:/var/lib/postgresql/data"
+        deploy:
+            replicas: 1
+            placement:
+                constraints:
+                    - node.role == manager
+
+    redis:
+        image: redis:4.0
+        restart: always
+        environment:
+            - REDIS_HOST=redis
+            - REDIS_PORT=6379
+        expose:
+            - "6379"
+        deploy:
+            replicas: 1
+            placement:
+                constraints:
+                    - node.role == manager
+
+    flower:
+        build: .
+        image: henryturner27/airflow
+        restart: always
+        environment:
+            - EXECUTOR=CeleryExecutor
+        depends_on:
+            - redis
+        ports:
+            - "5555:5555"
+        deploy:
+            replicas: 1
+            placement:
+                constraints:
+                    - node.role == manager
+        command: ["flower"]
+
+
+    webserver:
+        build: .
+        image: henryturner27/airflow
+        restart: always
+        environment:
+            - EXECUTOR=CeleryExecutor
+        depends_on:
+            - postgres
+            - redis
+        ports:
+            - "8080:8080"
+        deploy:
+            replicas: 1
+            placement:
+                constraints:
+                    - node.role == manager
+        command: ["webserver"]
+
+    scheduler:
+        build: .
+        image: henryturner27/airflow
+        restart: always
+        environment:
+            - EXECUTOR=CeleryExecutor
+        depends_on:
+            - webserver
+        deploy:
+            replicas: 1
+            placement:
+                constraints:
+                    - node.role == manager
+        command: ["scheduler"]
+
+    worker:
+        build: .
+        image: henryturner27/airflow
+        restart: always
+        environment:
+            - EXECUTOR=CeleryExecutor
+        depends_on:
+            - scheduler
+        expose:
+            - "8793"
+        deploy:
+            replicas: 4
+            placement:
+                constraints:
+                    - node.role == worker
+        command: ["worker"]
+
+volumes:
+    db_data:
