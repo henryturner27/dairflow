@@ -34,19 +34,19 @@ fi
 
 case "$1" in
 	webserver-scheduler)
-		exec /bin/bash -c "sleep 5; source activate airflow_env; airflow initdb; airflow webserver & airflow scheduler"
+		exec /bin/bash -c "sleep 5; airflow db init; airflow users create --role Admin --username admin --email admin@dairflow.com --firstname admin --lastname admin --password admin; airflow webserver & airflow scheduler"
 		;;
 	webserver)
-		exec /bin/bash -c "sleep 5; source activate airflow_env; airflow initdb; airflow webserver"
+		exec /bin/bash -c "sleep 5; airflow db init; airflow users create --role Admin --username admin --email admin@dairflow.com --firstname admin --lastname admin --password admin; airflow webserver"
 		;;
 	scheduler)
-		exec /bin/bash -c "sleep 5; source activate airflow_env; airflow scheduler"
+		exec /bin/bash -c "sleep 5; airflow scheduler"
 		;;
 	worker)
-		exec /bin/bash -c "sleep 5; source activate airflow_env; airflow worker"
+		exec /bin/bash -c "sleep 5; airflow worker"
 		;;
 	flower)
-		exec /bin/bash -c "sleep 5; source activate airflow_env; airflow flower"
+		exec /bin/bash -c "sleep 5; airflow flower"
 		;;
 	*)
 	echo "$1 not recognized. please specify either webserver, scheduler, or worker."

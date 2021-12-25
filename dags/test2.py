@@ -1,6 +1,6 @@
-from airflow import DAG
 from datetime import datetime, timedelta
-from utils import dag_builder
+from airflow import DAG
+from airflow.operators.python import PythonOperator
 
 
 dag_name = 'test2'
@@ -19,15 +19,21 @@ default_args = {
     # 'end_date': datetime(2016, 1, 1),
 }
 
-# add the task to this dict, with a list of immediately upstream dependencies to add to the DAG
-dag_structure = {
-    'task_1': [None],
-    'task_2': ['task_1'],
-    'task_3': ['task_2'],
-    'task_4': ['task_2'],
-    'task_5': ['task_3', 'task_4'],
-}
 
-dag = DAG(dag_name, default_args=default_args, schedule_interval=None)
+def print_task(task_str: str, *args):
+    print(task_str)
 
-dag_builder(dag_name=dag_name, dag=dag, tasks=dag_structure)
+
+with DAG(dag_name, default_args=default_args, schedule_interval=None) as dag:
+    task1 = PythonOperator(python_callable=print_task, task_id='task1', op_args=[
+                           'this is task_1'], dag=dag)
+    task2 = PythonOperator(python_callable=print_task, task_id='task2', op_args=[
+                           'this is task_2'], dag=dag)
+    task3 = PythonOperator(python_callable=print_task, task_id='task3', op_args=[
+                           'this is task_3'], dag=dag)
+    task4 = PythonOperator(python_callable=print_task, task_id='task4', op_args=[
+                           'this is task_4'], dag=dag)
+    task5 = PythonOperator(python_callable=print_task, task_id='task5', op_args=[
+                           'this is task_5'], dag=dag)
+
+    task1 >> [task2, task3, task4] >> task5

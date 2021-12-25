@@ -1,7 +1,8 @@
 version: '3'
 services:
     postgres:
-        image: postgres:9.6
+        image: postgres:13
+        container_name: postgres
         restart: always
         environment:
             - POSTGRES_USER=airflow
@@ -13,13 +14,13 @@ services:
         volumes:
             - "db_data:/var/lib/postgresql/data"
         deploy:
-            replicas: 1
             placement:
                 constraints:
                     - node.role == manager
 
     redis:
-        image: redis:4.0
+        image: redis:6.0
+        container_name: redis
         restart: always
         environment:
             - REDIS_HOST=redis
@@ -27,13 +28,13 @@ services:
         expose:
             - "6379"
         deploy:
-            replicas: 1
             placement:
                 constraints:
                     - node.role == manager
 
     flower:
         build: .
+        container_name: flower
         image: henryturner27/airflow
         restart: always
         environment:
@@ -43,7 +44,6 @@ services:
         ports:
             - "5555:5555"
         deploy:
-            replicas: 1
             placement:
                 constraints:
                     - node.role == manager
@@ -52,6 +52,7 @@ services:
 
     webserver:
         build: .
+        container_name: webserver
         image: henryturner27/airflow
         restart: always
         environment:
@@ -62,14 +63,16 @@ services:
         ports:
             - "8080:8080"
         deploy:
-            replicas: 1
             placement:
                 constraints:
                     - node.role == manager
+        volumes:
+          - ./dags:/airflow/dags
         command: ["webserver"]
 
     scheduler:
         build: .
+        container_name: scheduler
         image: henryturner27/airflow
         restart: always
         environment:
@@ -77,10 +80,11 @@ services:
         depends_on:
             - webserver
         deploy:
-            replicas: 1
             placement:
                 constraints:
                     - node.role == manager
+        volumes:
+          - ./dags:/airflow/dags
         command: ["scheduler"]
 
     worker:
@@ -98,6 +102,8 @@ services:
             placement:
                 constraints:
                     - node.role == worker
+        volumes:
+          - ./dags:/airflow/dags
         command: ["worker"]
 
 volumes:
