@@ -10,13 +10,9 @@ services:
             - POSTGRES_HOST=postgres
             - POSTGRES_DB=airflow
         expose:
-            - "5432"
+            - 5432
         volumes:
-            - "db_data:/var/lib/postgresql/data"
-        deploy:
-            placement:
-                constraints:
-                    - node.role == manager
+            - 'db_data:/var/lib/postgresql/data'
 
     redis:
         image: redis:6.0
@@ -26,34 +22,13 @@ services:
             - REDIS_HOST=redis
             - REDIS_PORT=6379
         expose:
-            - "6379"
-        deploy:
-            placement:
-                constraints:
-                    - node.role == manager
+            - 6379
 
     flower:
         build: .
         container_name: flower
         image: henryturner27/airflow
-        restart: always
-        environment:
-            - EXECUTOR=CeleryExecutor
-        depends_on:
-            - redis
-        ports:
-            - "5555:5555"
-        deploy:
-            placement:
-                constraints:
-                    - node.role == manager
-        command: ["flower"]
-
-
-    webserver:
-        build: .
-        container_name: webserver
-        image: henryturner27/airflow
+        user: airflow
         restart: always
         environment:
             - EXECUTOR=CeleryExecutor
@@ -61,50 +36,54 @@ services:
             - postgres
             - redis
         ports:
-            - "8080:8080"
-        deploy:
-            placement:
-                constraints:
-                    - node.role == manager
+            - 5555:5555
+        command: sh -c "sleep 5 && airflow celery flower"
+
+    webserver:
+        build: .
+        container_name: webserver
+        image: henryturner27/airflow
+        user: airflow
+        restart: always
+        environment:
+            - EXECUTOR=CeleryExecutor
+        depends_on:
+            - postgres
+            - redis
+        ports:
+            - 8080:8080
         volumes:
           - ./dags:/airflow/dags
-        command: ["webserver"]
+        command: sh -c "sleep 5 && airflow db init && airflow users create --role Admin --username admin --email admin@dairflow.com --firstname admin --lastname admin --password admin && airflow webserver"
 
     scheduler:
         build: .
         container_name: scheduler
         image: henryturner27/airflow
+        user: airflow
         restart: always
         environment:
             - EXECUTOR=CeleryExecutor
         depends_on:
             - webserver
-        deploy:
-            placement:
-                constraints:
-                    - node.role == manager
         volumes:
           - ./dags:/airflow/dags
-        command: ["scheduler"]
+        command: sh -c "sleep 5 && airflow scheduler"
 
     worker:
         build: .
         image: henryturner27/airflow
+        user: airflow
         restart: always
         environment:
             - EXECUTOR=CeleryExecutor
         depends_on:
             - scheduler
         expose:
-            - "8793"
-        deploy:
-            replicas: 4
-            placement:
-                constraints:
-                    - node.role == worker
+            - 8793
         volumes:
           - ./dags:/airflow/dags
-        command: ["worker"]
+        command: sh -c "sleep 5 && airflow celery worker"
 
 volumes:
     db_data:
